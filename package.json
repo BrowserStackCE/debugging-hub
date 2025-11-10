@@ -52,6 +52,7 @@
     "@tailwindcss/postcss": "^4.1.15",
     "copy-webpack-plugin": "^13.0.1",
     "electron-squirrel-startup": "^1.0.1",
+    "lodash": "^4.17.21",
     "pouchdb": "^9.0.0",
     "rc-field-form": "^2.7.0",
     "react": "^19.2.0",

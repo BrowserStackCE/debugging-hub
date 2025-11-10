@@ -3,32 +3,75 @@ import { usePromise } from "../../../hooks/use-promise";
 import { toast } from "react-toastify";
 import Editor from 'react-simple-code-editor';
 import { highlight } from 'sugar-high'
+import { useState } from "react";
+import SessionPlayer from "../../../components/session-player";
 const { Field } = Form
 
 function Info({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex flex-col bg-base-200 rounded-lg p-3">
             <span className="text-xs text-base-content/70 uppercase tracking-wide">{label}</span>
-            <span className="font-medium text-base-content">{value}</span>
+            <span title={value} className="font-medium text-base-content truncate text-ellipsis">{value}</span>
         </div>
     );
+}
+
+function RemoveUnwantedCaps(capabilities: any) {
+    console.log(capabilities)
+    const keysToRemove = [
+        "W3C_capabilities",
+        "new_bucketing",
+        "detected_language",
+        "bstack:options.testhubBuildUuid",
+        "bstack:options.buildProductMap",
+        "bstack:options.accessibilityOptions",
+        "bstack:options.accessibility",
+        "bstack:options.browserstackSDK",
+        "bstack:options.hostName"
+    ]
+
+    const cleanedCaps = typeof capabilities == 'string' ? JSON.parse(capabilities) : { ...capabilities };
+
+    for (const key of keysToRemove) {
+        // Handle dot notation like "bstack:options.testhubBuildUuid"
+        if (key.includes(".")) {
+            const parts = key.split(".");
+            const parentKey = parts[0];
+            const childKey = parts[1];
+
+            if (
+                cleanedCaps[parentKey] &&
+                typeof cleanedCaps[parentKey] === "object"
+            ) {
+                delete cleanedCaps[parentKey][childKey];
+            }
+        } else {
+            // Remove top-level key
+            delete cleanedCaps[key];
+        }
+    }
+
+    return JSON.stringify(cleanedCaps, undefined, 2);
 }
 
 export default function ReplayTool() {
     const [fetchSessionDetails, fetchingSession, session] = usePromise(window.browserstackAPI.getAutomateSessionDetails);
     const [parseTextLogs, parsingTextLogs, textLogsResult] = usePromise(window.browserstackAPI.getAutomateParsedTextLogs)
-
+    const [capabilities, SetCapabilities] = useState<string>('')
+    const [isExecuting,SetIsExecuting] = useState(false)
     const OpenSession = (input: any) => {
         toast.promise(fetchSessionDetails(input.sessionId).then((res) => parseTextLogs(res)), {
             pending: "Opening Session...",
             success: "Session Loaded",
             error: "Failed to Load session probably invalid session ID. Please check console for errors"
+        }).then((res) => {
+            SetCapabilities(RemoveUnwantedCaps(res.capabilities[0]))
         }).catch((err) => {
             console.error(err)
         })
+
     }
 
-    console.log(textLogsResult)
 
     return (
         <div className="p-5 space-y-4">
@@ -37,7 +80,7 @@ export default function ReplayTool() {
                 <Field name="sessionId" >
                     <input className="input placeholder-gray-300" placeholder="Session ID" />
                 </Field>
-                <button disabled={fetchingSession} type="submit" className="btn btn-primary" >Open</button>
+                <button disabled={fetchingSession || isExecuting} type="submit" className="btn btn-neutral" >Open</button>
             </Form>
             {session && <>
                 <div className="grid lg:grid-cols-2">
@@ -61,11 +104,12 @@ export default function ReplayTool() {
                         <h2 className="card-title text-lg font-semibold mb-4">
                             Capabilities
                         </h2>
-                        <div className="w-full h-full bg-gray-50">
+                        <div className="w-full h-full bg-gray-50 border">
                             <Editor
-                                highlight={(code)=>highlight(code)}
-                                onValueChange={console.log}
-                                value={JSON.stringify(textLogsResult.capabilities[0],undefined,2)}
+                                highlight={(code) => highlight(code)}
+                                onValueChange={(caps) => SetCapabilities(caps)}
+                                value={capabilities}
+                                disabled={isExecuting}
                                 padding={10}
                                 style={{
                                     fontFamily: '"Fira code", "Fira Mono", monospace',
@@ -75,6 +119,15 @@ export default function ReplayTool() {
                         </div>
                     </div>}
                 </div>
+                {textLogsResult && <div className="flex flex-col w-full gap-4">
+                    <SessionPlayer
+                        loading={parsingTextLogs || fetchingSession}
+                        parsedTextLogs={textLogsResult}
+                        sessionDetails={session}
+                        overridenCaps={capabilities}
+                        onExecutionStateChange={SetIsExecuting}
+                    />
+                </div>}
             </>}
         </div>
     )

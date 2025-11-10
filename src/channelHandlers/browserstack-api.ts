@@ -3,8 +3,8 @@ import CONFIG from "../constants/config"
 
 const BASE_URL = 'https://api.browserstack.com'
 
-const getAuth = () => {
-    return `Basic ${Buffer.from(`${CONFIG.username}:${CONFIG.accessKey}`).toString('base64')}`
+const getAuth = (username?:string,accessKey?:string) => {
+    return `Basic ${Buffer.from(`${username || CONFIG.adminUsername}:${accessKey || CONFIG.adminAccessKey}`).toString('base64')}`
 }
 
 const download = async (url: string) => {
@@ -31,4 +31,8 @@ export const getParsedAutomateTextLogs = async (session:AutomateSessionResponse)
     const logs = await download(session.automation_session.logs);
     const result = parseAutomateTextLogs(logs.split('\n'))
     return result
+}
+
+export const startBrowserStackSession:BrowserStackAPI['startSession'] = async (options:StartSessionOptions)=>{
+
 }

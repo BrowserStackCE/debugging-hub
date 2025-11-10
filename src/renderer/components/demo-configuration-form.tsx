@@ -2,11 +2,11 @@ import { useEffect } from 'react';
 import Form from 'rc-field-form';
 import { toast } from 'react-toastify';
 const { Field } = Form
-export default function AdminCredentialsConfigForm() {
+export default function DemoCredentialsConfigForm() {
     const [form] = Form.useForm()
     const handleSubmission = async (input: BrowserStackCredentials) => {
         
-        toast.promise(window.credentialsAPI.setBrowserStackAdminCredentials(input.username, input.accessKey,input._rev),{
+        toast.promise(window.credentialsAPI.setBrowserStackDemoCredentials(input.username, input.accessKey,input._rev),{
             pending:"Saving credentials",
             success:"Credentials Saved successfully",
             error:"Something went wrong. Please check the console"
@@ -18,7 +18,7 @@ export default function AdminCredentialsConfigForm() {
     }
 
     const fetchCredentials = ()=>{
-        window.credentialsAPI.getBrowserStackAdminCredentials().then((creds) => {
+        window.credentialsAPI.getBrowserStackDemoCredentials().then((creds) => {
             console.log(creds)
             if (creds) {
                 form.setFieldsValue({
@@ -34,7 +34,7 @@ export default function AdminCredentialsConfigForm() {
     }, [])
     return (
         <div className="p-6 rounded-box">
-            <h2 className="text-lg font-bold mb-4">Admin Credentials</h2>
+            <h2 className="text-lg font-bold mb-4">Demo Account Credentials</h2>
             <Form form={form} className='flex flex-col' onFinish={handleSubmission}>
                 <Field
                     name="username"

@@ -3,11 +3,14 @@ declare global {
     type CredentialsAPI = {
         setBrowserStackAdminCredentials: (username: string, accessKey: string, _rev?: string) => Promise<string>
         getBrowserStackAdminCredentials: () => Promise<BrowserStackCredentials | null>
+        setBrowserStackDemoCredentials: (username: string, accessKey: string, _rev?: string) => Promise<string>
+        getBrowserStackDemoCredentials: () => Promise<BrowserStackCredentials | null>
     }
 
     type BrowserStackAPI = {
         getAutomateSessionDetails: (id: string) => Promise<AutomateSessionResponse>
-        getAutomateParsedTextLogs: (session:AutomateSessionResponse)=> Promise<ParsedTextLogsResult>
+        getAutomateParsedTextLogs: (session: AutomateSessionResponse) => Promise<ParsedTextLogsResult>
+        startSession: (options:StartSessionOptions) => any
     }
 
     interface DBItem {
@@ -68,9 +71,16 @@ declare global {
     }
 
     interface ParsedTextLogsResult {
-        capabilities: string[];
+        capabilities: any[];
         requests: (ParsedTextLogsRequest | string)[];
         responses: unknown[];
+    }
+
+    type StartSessionOptions = {
+        capabilities: Record<string, any>
+        username?: string
+        accessKey?: string
+        hubUrl?: string
     }
 
 }

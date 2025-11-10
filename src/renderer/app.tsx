@@ -1,12 +1,11 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import Layout from './layout';
-import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { createHashRouter, RouterProvider } from 'react-router-dom';
 import ConfigurationsPage from './routes/configurations';
-import AutomatePage from './routes/automate';
 import Products from './products';
 
-const Router = createMemoryRouter([
+const Router = createHashRouter([
     {
         Component: Layout,
         children: [
