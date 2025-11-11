@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import Editor from 'react-simple-code-editor';
 import { highlight } from 'sugar-high'
 import { useState } from "react";
-import SessionPlayer from "../../../components/session-player";
+import SessionPlayer from "../../../components/replay-tool/session-player";
 const { Field } = Form
 
 function Info({ label, value }: { label: string; value: string }) {
