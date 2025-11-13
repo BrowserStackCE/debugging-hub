@@ -1,5 +1,6 @@
 import { parseAutomateTextLogs } from "../utils/text-logs-parser"
 import CONFIG from "../constants/config"
+import { parseAutomateSessionLogs } from "../utils/latency-finder/session-logs-parser"
 
 const BASE_URL = 'https://api.browserstack.com'
 
@@ -31,6 +32,12 @@ export const getParsedAutomateTextLogs = async (session:AutomateSessionResponse)
     const logs = await download(session.automation_session.logs);
     const result = parseAutomateTextLogs(logs.split('\n'))
     return result
+}
+
+export const getAutomateParsedSessionLogs = async (session: AutomateSessionResponse)=> {
+    const logs = await download(session.automation_session.logs);
+    const result = parseAutomateSessionLogs(logs);
+    return result;
 }
 
 export const startBrowserStackSession:BrowserStackAPI['startSession'] = async (options:StartSessionOptions)=>{

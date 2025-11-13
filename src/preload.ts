@@ -12,7 +12,10 @@ const credentialsAPI: CredentialsAPI = {
 const browserstackAPI: BrowserStackAPI = {
     getAutomateSessionDetails: (id:string)=> ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_SESSION,id),
     getAutomateParsedTextLogs: (session)=>ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_PARSED_TEXT_LOGS,session),
-    startSession:(options)=>ipcRenderer.invoke(CHANNELS.BROWSERSTACK_START_SESSION,options)
+    startSession:(options)=>ipcRenderer.invoke(CHANNELS.BROWSERSTACK_START_SESSION,options),
+
+    // latency-finder
+    getAutomateParsedSessionLogs: (session)=>ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_PARSED_SESSION_LOGS,session),
 }
 
 contextBridge.exposeInMainWorld('credentialsAPI', credentialsAPI);
