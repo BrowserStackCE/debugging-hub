@@ -1,7 +1,4 @@
-// Helper: convert UTC timestamp to epoch ms
-export const convertUTCToEpoch = (time: string): number => {
-  return Date.parse(time);
-};
+import { convertUTCToEpoch } from "./helper";
 
 export const parseAutomateSessionLogs = (
   logString: string

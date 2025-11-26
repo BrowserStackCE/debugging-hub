@@ -16,6 +16,7 @@ const browserstackAPI: BrowserStackAPI = {
 
     // latency-finder
     getAutomateParsedSessionLogs: (session)=>ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_PARSED_SESSION_LOGS,session),
+    getAutomateParsedSeleniumLogs: (session)=>ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_PARSED_SELENIUM_LOGS,session),
 }
 
 contextBridge.exposeInMainWorld('credentialsAPI', credentialsAPI);
