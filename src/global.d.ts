@@ -10,7 +10,13 @@ declare global {
     type BrowserStackAPI = {
         getAutomateSessionDetails: (id: string) => Promise<AutomateSessionResponse>
         getAutomateParsedTextLogs: (session: AutomateSessionResponse) => Promise<ParsedTextLogsResult>
-        startSession: (options:StartSessionOptions) => any
+        startSession: (options: StartSessionOptions) => Promise<StartSessionResponse>
+        stopSession: (options: StopSessionOptions) => Promise<StopSessionResponse>
+        executeCommand: (options: ExecuteCommandOptions) => any
+    }
+
+    type ElectronAPI = {
+        openExternalUrl: (url: string) => Promise<void>
     }
 
     interface DBItem {
@@ -24,7 +30,8 @@ declare global {
 
     interface Window {
         credentialsAPI: CredentialsAPI;
-        browserstackAPI: BrowserStackAPI
+        browserstackAPI: BrowserStackAPI;
+        electronAPI: ElectronAPI
     }
 
     interface ProductPageProps {
@@ -68,6 +75,7 @@ declare global {
         method: string;
         endpoint: string;
         data: Record<string, unknown> | string;
+        commandName: string
     }
 
     interface ParsedTextLogsResult {
@@ -78,8 +86,29 @@ declare global {
 
     type StartSessionOptions = {
         capabilities: Record<string, any>
-        username?: string
-        accessKey?: string
+        hubUrl?: string
+    }
+
+    type StartSessionResponse = {
+        sessionId: string
+        raw: any
+    }
+
+    type StopSessionOptions = {
+        hubUrl?: string,
+        sessionId: string
+    }
+
+    type StopSessionResponse = {
+        success: boolean,
+        sessionId: string,
+        raw: any,
+    }
+
+    type ExecuteCommandOptions = {
+        request: ParsedTextLogsRequest
+        response: any
+        sessionId: string
         hubUrl?: string
     }
 
