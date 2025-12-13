@@ -1,5 +1,6 @@
 import AutomatePage from "./routes/automate";
 import ReplayTool from "./routes/automate/tools/replay-tool";
+import SessionComparison from "./routes/automate/tools/session-comparison";
 
 const Products = [
     {
@@ -18,6 +19,12 @@ const Products = [
                 description:"Analyses time spend on different actions. Helpful to identify inside/outside time for a customer session.",
                 path:'/automate/latency-analyser',
                 component: null
+            },
+            {
+                title:"Session Comparison",
+                description:"Compares logs across sessions and highlights differences",
+                path:'/automate/session-comparison',
+                component: SessionComparison
             }
         ]
     }

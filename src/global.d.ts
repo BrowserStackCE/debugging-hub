@@ -7,7 +7,9 @@ declare global {
 
     type BrowserStackAPI = {
         getAutomateSessionDetails: (id: string) => Promise<AutomateSessionResponse>
-        getAutomateParsedTextLogs: (session:AutomateSessionResponse)=> Promise<ParsedTextLogsResult>
+        getAutomateParsedTextLogs: (session:AutomateSessionResponse) => Promise<ParsedTextLogsResult>
+        getSeleniumLogs: (selenium_logs_url: string) => Promise<string>
+        getHarLogs: (harLogsUrl: string) => Promise<string>
     }
 
     interface DBItem {
