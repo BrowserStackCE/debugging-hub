@@ -5,6 +5,7 @@ import Editor from 'react-simple-code-editor';
 import { highlight } from 'sugar-high'
 import { useState } from "react";
 import SessionPlayer from "../../../components/replay-tool/session-player";
+import RequestCard from "../../../components/replay-tool/request-card";
 const { Field } = Form
 
 function Info({ label, value }: { label: string; value: string }) {
@@ -58,7 +59,8 @@ export default function ReplayTool() {
     const [fetchSessionDetails, fetchingSession, session] = usePromise(window.browserstackAPI.getAutomateSessionDetails);
     const [parseTextLogs, parsingTextLogs, textLogsResult] = usePromise(window.browserstackAPI.getAutomateParsedTextLogs)
     const [capabilities, SetCapabilities] = useState<string>('')
-    const [isExecuting,SetIsExecuting] = useState(false)
+    const [isExecuting, SetIsExecuting] = useState(false)
+    const [hubURL, SetHubURL] = useState<string>(null)
     const OpenSession = (input: any) => {
         toast.promise(fetchSessionDetails(input.sessionId).then((res) => parseTextLogs(res)), {
             pending: "Opening Session...",
@@ -82,7 +84,7 @@ export default function ReplayTool() {
                 </Field>
                 <button disabled={fetchingSession || isExecuting} type="submit" className="btn btn-neutral" >Open</button>
             </Form>
-            {session && <>
+            {textLogsResult && session && !isExecuting && <>
                 <div className="grid lg:grid-cols-2">
                     <div className="card bg-base-100 p-6">
                         <h2 className="card-title text-lg font-semibold mb-4">
@@ -118,17 +120,33 @@ export default function ReplayTool() {
                             />
                         </div>
                     </div>}
+
                 </div>
+                {textLogsResult && <details className="collapse collapse-arrow bg-base-100 border border-base-300" name="my-accordion-det-1" open={false}>
+                    <summary className="collapse-title font-semibold">Commands</summary>
+                    <div className="collapse-content">
+                        {textLogsResult.requests.map((request) => (
+                            <RequestCard request={request} />
+                        ))}
+                    </div>
+                </details>}
+
                 {textLogsResult && <div className="flex flex-col w-full gap-4">
-                    <SessionPlayer
-                        loading={parsingTextLogs || fetchingSession}
-                        parsedTextLogs={textLogsResult}
-                        sessionDetails={session}
-                        overridenCaps={capabilities}
-                        onExecutionStateChange={SetIsExecuting}
-                    />
+                    {textLogsResult && !isExecuting && <div className="flex flex-col gap-2">
+                        <label>Hub URL (Optional)</label>
+                        <select value={hubURL} onChange={(e) => SetHubURL(e.target.value)} className="select placeholder-gray-300 w-full" defaultValue="Default">
+                            <option disabled={true}>Default</option>
+                        </select>
+                    </div>}
                 </div>}
             </>}
+            {textLogsResult && <SessionPlayer
+                loading={parsingTextLogs || fetchingSession}
+                parsedTextLogs={textLogsResult}
+                sessionDetails={session}
+                overridenCaps={capabilities}
+                onExecutionStateChange={SetIsExecuting}
+            />}
         </div>
     )
 }
