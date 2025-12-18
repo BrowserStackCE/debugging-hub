@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react';
-import ReactDiffViewer from 'react-diff-viewer';
+import CustomDiffViewer from './CustomDiffViewer';
 
 function createInfoString(session: any) {
   if (!session?.automation_session) return "No Session Data";
-
   const s = session.automation_session;
   return `Project: ${s.project_name}
 Build: ${s.build_name}
@@ -45,23 +44,20 @@ export function SessionDiffView({
   loadingHarB
 }: SessionDiffViewProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'capabilities' | 'selenium' | 'network'>('info');
+  const [seleniumBatch, setSeleniumBatch] = useState(0);
+  const LINES_PER_BATCH = 200;
 
   const parseHarLogs = useMemo(() => (harData: string | null) => {
     if (!harData) return null;
-
     try {
       const har = JSON.parse(harData);
       if (!har?.log?.entries?.length) return null;
-
       const groupedEntries: Record<string, any[]> = {};
       har.log.entries.forEach((entry: any) => {
         const key = `${entry.request.method}|||${entry.request.url}`;
-        if (!groupedEntries[key]) {
-          groupedEntries[key] = [];
-        }
+        if (!groupedEntries[key]) groupedEntries[key] = [];
         groupedEntries[key].push(entry);
       });
-
       return groupedEntries;
     } catch (e) {
       console.error('Error parsing HAR data:', e);
@@ -74,16 +70,12 @@ export function SessionDiffView({
     const firstEntry = entries[0];
     const response = firstEntry.response;
     const timings = firstEntry.timings || {};
-
     const statusCodes = entries.map((e: any) => e.response.status);
     const uniqueStatuses = [...new Set(statusCodes)];
     const avgTime = entries.reduce((sum, e) => sum + (e.time || 0), 0) / entries.length;
     const minTime = Math.min(...entries.map((e: any) => e.time || 0));
     const maxTime = Math.max(...entries.map((e: any) => e.time || 0));
-
-    const urlObj = new URL(url);
-    const shortUrl = urlObj.pathname + urlObj.search;
-
+    
     return `Count: ${entries.length} | Status: ${uniqueStatuses.join(', ')}
 Time: ${avgTime.toFixed(1)}ms (${minTime}-${maxTime}ms)
 Size: ${response.bodySize || 0}b | Type: ${response.content?.mimeType || 'unknown'}
@@ -96,53 +88,58 @@ Timings: ${Object.entries(timings)
   const networkComparison = useMemo(() => {
     const harLogsA = parseHarLogs(harA);
     const harLogsB = parseHarLogs(harB);
-
-    if (!harLogsA && !harLogsB) {
-      return { matched: [], onlyInA: [], onlyInB: [] };
-    }
-
+    if (!harLogsA && !harLogsB) return { matched: [], onlyInA: [], onlyInB: [] };
     const matched: Array<{ key: string; dataA: any[]; dataB: any[] }> = [];
     const onlyInA: Array<{ key: string; data: any[] }> = [];
     const onlyInB: Array<{ key: string; data: any[] }> = [];
-
     const keysA = new Set(Object.keys(harLogsA || {}));
     const keysB = new Set(Object.keys(harLogsB || {}));
-
     keysA.forEach(key => {
-      if (keysB.has(key)) {
-        matched.push({
-          key,
-          dataA: harLogsA![key],
-          dataB: harLogsB![key]
-        });
-      } else {
-        onlyInA.push({
-          key,
-          data: harLogsA![key]
-        });
-      }
+      if (keysB.has(key)) matched.push({ key, dataA: harLogsA![key], dataB: harLogsB![key] });
+      else onlyInA.push({ key, data: harLogsA![key] });
     });
-
     keysB.forEach(key => {
-      if (!keysA.has(key)) {
-        onlyInB.push({
-          key,
-          data: harLogsB![key]
-        });
-      }
+      if (!keysA.has(key)) onlyInB.push({ key, data: harLogsB![key] });
     });
-
     return { matched, onlyInA, onlyInB };
   }, [harA, harB, parseHarLogs]);
+
+  // Selenium log batching logic
+  const seleniumLogStats = useMemo(() => {
+    const logsA = seleniumA || "";
+    const logsB = seleniumB || "";
+    const linesA = logsA.split('\n');
+    const linesB = logsB.split('\n');
+    const maxLines = Math.max(linesA.length, linesB.length);
+    const totalBatches = Math.ceil(maxLines / LINES_PER_BATCH);
+    
+    return {
+      linesA: linesA.length,
+      linesB: linesB.length,
+      maxLines,
+      totalBatches,
+      linesA_raw: linesA,
+      linesB_raw: linesB
+    };
+  }, [seleniumA, seleniumB]);
+
+  const currentSeleniumBatch = useMemo(() => {
+    const { linesA_raw, linesB_raw } = seleniumLogStats;
+    const startLine = seleniumBatch * LINES_PER_BATCH;
+    const endLine = startLine + LINES_PER_BATCH;
+    
+    const batchA = linesA_raw.slice(startLine, endLine).join('\n');
+    const batchB = linesB_raw.slice(startLine, endLine).join('\n');
+    
+    return { batchA, batchB, startLine: startLine + 1, endLine: Math.min(endLine, seleniumLogStats.maxLines) };
+  }, [seleniumBatch, seleniumLogStats]);
 
   const infoStrA = createInfoString(sessionA);
   const infoStrB = createInfoString(sessionB);
   const nameA = sessionA?.automation_session?.name || "Unnamed Session A";
   const nameB = sessionB?.automation_session?.name || "Unnamed Session B";
-
-  const capsStrA = JSON.stringify(logsA.capabilities[0], null, 2);
-  const capsStrB = JSON.stringify(logsB.capabilities[0], null, 2);
-
+  const capsStrA = JSON.stringify(logsA?.capabilities?.[0] || {}, null, 2);
+  const capsStrB = JSON.stringify(logsB?.capabilities?.[0] || {}, null, 2);
   const selLogsA = loadingA ? "Loading logs for A..." : (seleniumA || "No Selenium logs available");
   const selLogsB = loadingB ? "Loading logs for B..." : (seleniumB || "No Selenium logs available");
 
@@ -153,13 +150,24 @@ Timings: ${Object.entries(timings)
     { id: 'network', label: 'Network Logs' }
   ] as const;
 
+  // Reset batch when switching tabs
+  const handleTabChange = (tabId: typeof activeTab) => {
+    setActiveTab(tabId);
+    if (tabId === 'selenium') {
+      setSeleniumBatch(0);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+    <div 
+      className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col" 
+      style={{ height: 'calc(100vh - 120px)' }}
+    >
       <div className="flex border-b bg-gray-50 flex-shrink-0">
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
             className={`px-6 py-3 font-medium transition-colors ${
               activeTab === tab.id
                 ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
@@ -170,43 +178,72 @@ Timings: ${Object.entries(timings)
           </button>
         ))}
       </div>
-
-      <div className="flex-1 overflow-auto">
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
         {activeTab === 'info' && (
-          <ReactDiffViewer
+          <CustomDiffViewer
             oldValue={infoStrA}
             newValue={infoStrB}
-            splitView={true}
             leftTitle={nameA}
             rightTitle={nameB}
-            useDarkTheme={false}
+            batchSize={100}
           />
         )}
-
         {activeTab === 'capabilities' && (
-          <ReactDiffViewer
+          <CustomDiffViewer
             oldValue={capsStrA}
             newValue={capsStrB}
-            splitView={true}
             leftTitle={nameA}
             rightTitle={nameB}
-            useDarkTheme={false}
+            batchSize={100}
           />
         )}
-
         {activeTab === 'selenium' && (
-          <ReactDiffViewer
-            oldValue={selLogsA}
-            newValue={selLogsB}
-            splitView={true}
-            leftTitle={nameA}
-            rightTitle={nameB}
-            useDarkTheme={false}
-          />
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* Batch navigation controls */}
+            {!loadingA && !loadingB && seleniumLogStats.totalBatches > 1 && (
+              <div className="bg-gray-100 border-b px-4 py-3 flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-700">
+                    Lines {currentSeleniumBatch.startLine} - {currentSeleniumBatch.endLine} of {seleniumLogStats.maxLines}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    (Batch {seleniumBatch + 1} of {seleniumLogStats.totalBatches})
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSeleniumBatch(Math.max(0, seleniumBatch - 1))}
+                    disabled={seleniumBatch === 0}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ← Previous {LINES_PER_BATCH} lines
+                  </button>
+                  <button
+                    onClick={() => setSeleniumBatch(Math.min(seleniumLogStats.totalBatches - 1, seleniumBatch + 1))}
+                    disabled={seleniumBatch >= seleniumLogStats.totalBatches - 1}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next {LINES_PER_BATCH} lines →
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Diff viewer for current batch */}
+            <div className="flex-1 overflow-hidden">
+              <CustomDiffViewer
+                oldValue={loadingA ? "Loading logs for A..." : currentSeleniumBatch.batchA}
+                newValue={loadingB ? "Loading logs for B..." : currentSeleniumBatch.batchB}
+                leftTitle={`${nameA} (${seleniumLogStats.linesA} lines total)`}
+                rightTitle={`${nameB} (${seleniumLogStats.linesB} lines total)`}
+                batchSize={LINES_PER_BATCH}
+              />
+            </div>
+          </div>
         )}
-
         {activeTab === 'network' && (
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6 overflow-auto h-full w-full">
             {loadingHarA || loadingHarB ? (
               <div className="text-center py-8 text-gray-500">
                 Loading network logs...
@@ -221,8 +258,7 @@ Timings: ${Object.entries(timings)
                     {networkComparison.matched.map((item, idx) => {
                       const [method, url] = item.key.split('|||');
                       const urlObj = new URL(url);
-                      const shortUrl = urlObj.pathname + urlObj.search;
-
+                      const shortUrl = urlObj.origin + urlObj.pathname + urlObj.search;
                       return (
                         <div key={idx} className="border rounded-lg overflow-hidden">
                           <div className="bg-gray-50 px-3 py-2 font-medium text-xs text-gray-700 break-all">
@@ -247,7 +283,6 @@ Timings: ${Object.entries(timings)
                     })}
                   </div>
                 )}
-
                 {networkComparison.onlyInA.length > 0 && (
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-red-700 border-b pb-2">
@@ -257,7 +292,6 @@ Timings: ${Object.entries(timings)
                       const [method, url] = item.key.split('|||');
                       const urlObj = new URL(url);
                       const shortUrl = urlObj.pathname + urlObj.search;
-
                       return (
                         <div key={idx} className="border border-red-200 rounded-lg overflow-hidden bg-red-50">
                           <div className="bg-red-100 px-3 py-2 font-medium text-xs text-red-800 break-all">
@@ -271,7 +305,6 @@ Timings: ${Object.entries(timings)
                     })}
                   </div>
                 )}
-
                 {networkComparison.onlyInB.length > 0 && (
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-green-700 border-b pb-2">
@@ -281,7 +314,6 @@ Timings: ${Object.entries(timings)
                       const [method, url] = item.key.split('|||');
                       const urlObj = new URL(url);
                       const shortUrl = urlObj.pathname + urlObj.search;
-
                       return (
                         <div key={idx} className="border border-green-200 rounded-lg overflow-hidden bg-green-50">
                           <div className="bg-green-100 px-3 py-2 font-medium text-xs text-green-800 break-all">
@@ -295,7 +327,6 @@ Timings: ${Object.entries(timings)
                     })}
                   </div>
                 )}
-
                 {networkComparison.matched.length === 0 &&
                  networkComparison.onlyInA.length === 0 &&
                  networkComparison.onlyInB.length === 0 && (
