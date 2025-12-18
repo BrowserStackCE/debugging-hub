@@ -1,7 +1,24 @@
 import { useState, useMemo } from 'react';
-import CustomDiffViewer from './CustomDiffViewer';
+import DiffViewer from './DiffViewer';
+import { SessionData, TextLogsResult } from '../types';
+import { compareNetworkLogs, formatNetworkEntry } from '../utils/networkParser';
 
-function createInfoString(session: any) {
+interface SessionDiffViewProps {
+  sessionA: SessionData;
+  sessionB: SessionData;
+  logsA: TextLogsResult;
+  logsB: TextLogsResult;
+  seleniumA: string | null;
+  seleniumB: string | null;
+  harA: string | null;
+  harB: string | null;
+  loadingA: boolean;
+  loadingB: boolean;
+  loadingHarA: boolean;
+  loadingHarB: boolean;
+}
+
+function createInfoString(session: SessionData) {
   if (!session?.automation_session) return "No Session Data";
   const s = session.automation_session;
   return `Project: ${s.project_name}
@@ -14,22 +31,7 @@ Duration: ${s.duration}s
 Created At: ${new Date(s.created_at).toLocaleString()}`.trim();
 }
 
-interface SessionDiffViewProps {
-  sessionA: any;
-  sessionB: any;
-  logsA: any;
-  logsB: any;
-  seleniumA: string | null;
-  seleniumB: string | null;
-  harA: string | null;
-  harB: string | null;
-  loadingA: boolean;
-  loadingB: boolean;
-  loadingHarA: boolean;
-  loadingHarB: boolean;
-}
-
-export function SessionDiffView({
+export default function SessionDiffView({
   sessionA,
   sessionB,
   logsA,
@@ -47,64 +49,10 @@ export function SessionDiffView({
   const [seleniumBatch, setSeleniumBatch] = useState(0);
   const LINES_PER_BATCH = 200;
 
-  const parseHarLogs = useMemo(() => (harData: string | null) => {
-    if (!harData) return null;
-    try {
-      const har = JSON.parse(harData);
-      if (!har?.log?.entries?.length) return null;
-      const groupedEntries: Record<string, any[]> = {};
-      har.log.entries.forEach((entry: any) => {
-        const key = `${entry.request.method}|||${entry.request.url}`;
-        if (!groupedEntries[key]) groupedEntries[key] = [];
-        groupedEntries[key].push(entry);
-      });
-      return groupedEntries;
-    } catch (e) {
-      console.error('Error parsing HAR data:', e);
-      return null;
-    }
-  }, []);
-
-  const formatNetworkEntry = (key: string, entries: any[]): string => {
-    const [method, url] = key.split('|||');
-    const firstEntry = entries[0];
-    const response = firstEntry.response;
-    const timings = firstEntry.timings || {};
-    const statusCodes = entries.map((e: any) => e.response.status);
-    const uniqueStatuses = [...new Set(statusCodes)];
-    const avgTime = entries.reduce((sum, e) => sum + (e.time || 0), 0) / entries.length;
-    const minTime = Math.min(...entries.map((e: any) => e.time || 0));
-    const maxTime = Math.max(...entries.map((e: any) => e.time || 0));
-    
-    return `Count: ${entries.length} | Status: ${uniqueStatuses.join(', ')}
-Time: ${avgTime.toFixed(1)}ms (${minTime}-${maxTime}ms)
-Size: ${response.bodySize || 0}b | Type: ${response.content?.mimeType || 'unknown'}
-Timings: ${Object.entries(timings)
-  .filter(([_, v]) => v !== -1)
-  .map(([k, v]) => `${k}:${v}ms`)
-  .join(' ')}`;
-  };
-
   const networkComparison = useMemo(() => {
-    const harLogsA = parseHarLogs(harA);
-    const harLogsB = parseHarLogs(harB);
-    if (!harLogsA && !harLogsB) return { matched: [], onlyInA: [], onlyInB: [] };
-    const matched: Array<{ key: string; dataA: any[]; dataB: any[] }> = [];
-    const onlyInA: Array<{ key: string; data: any[] }> = [];
-    const onlyInB: Array<{ key: string; data: any[] }> = [];
-    const keysA = new Set(Object.keys(harLogsA || {}));
-    const keysB = new Set(Object.keys(harLogsB || {}));
-    keysA.forEach(key => {
-      if (keysB.has(key)) matched.push({ key, dataA: harLogsA![key], dataB: harLogsB![key] });
-      else onlyInA.push({ key, data: harLogsA![key] });
-    });
-    keysB.forEach(key => {
-      if (!keysA.has(key)) onlyInB.push({ key, data: harLogsB![key] });
-    });
-    return { matched, onlyInA, onlyInB };
-  }, [harA, harB, parseHarLogs]);
+    return compareNetworkLogs(harA, harB);
+  }, [harA, harB]);
 
-  // Selenium log batching logic
   const seleniumLogStats = useMemo(() => {
     const logsA = seleniumA || "";
     const logsB = seleniumB || "";
@@ -140,17 +88,14 @@ Timings: ${Object.entries(timings)
   const nameB = sessionB?.automation_session?.name || "Unnamed Session B";
   const capsStrA = JSON.stringify(logsA?.capabilities?.[0] || {}, null, 2);
   const capsStrB = JSON.stringify(logsB?.capabilities?.[0] || {}, null, 2);
-  const selLogsA = loadingA ? "Loading logs for A..." : (seleniumA || "No Selenium logs available");
-  const selLogsB = loadingB ? "Loading logs for B..." : (seleniumB || "No Selenium logs available");
 
   const tabs = [
     { id: 'info', label: 'Session Info' },
     { id: 'capabilities', label: 'Capabilities' },
-    { id: 'selenium', label: 'Selenium Logs' },
+    // { id: 'selenium', label: 'Selenium Logs' },
     { id: 'network', label: 'Network Logs' }
   ] as const;
 
-  // Reset batch when switching tabs
   const handleTabChange = (tabId: typeof activeTab) => {
     setActiveTab(tabId);
     if (tabId === 'selenium') {
@@ -181,7 +126,7 @@ Timings: ${Object.entries(timings)
       
       <div className="flex-1 flex flex-col overflow-hidden">
         {activeTab === 'info' && (
-          <CustomDiffViewer
+          <DiffViewer
             oldValue={infoStrA}
             newValue={infoStrB}
             leftTitle={nameA}
@@ -190,7 +135,7 @@ Timings: ${Object.entries(timings)
           />
         )}
         {activeTab === 'capabilities' && (
-          <CustomDiffViewer
+          <DiffViewer
             oldValue={capsStrA}
             newValue={capsStrB}
             leftTitle={nameA}
@@ -198,9 +143,8 @@ Timings: ${Object.entries(timings)
             batchSize={100}
           />
         )}
-        {activeTab === 'selenium' && (
+        {/* {activeTab === 'selenium' && (
           <div className="flex flex-col h-full overflow-hidden">
-            {/* Batch navigation controls */}
             {!loadingA && !loadingB && seleniumLogStats.totalBatches > 1 && (
               <div className="bg-gray-100 border-b px-4 py-3 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-4">
@@ -230,9 +174,8 @@ Timings: ${Object.entries(timings)
               </div>
             )}
             
-            {/* Diff viewer for current batch */}
             <div className="flex-1 overflow-hidden">
-              <CustomDiffViewer
+              <DiffViewer
                 oldValue={loadingA ? "Loading logs for A..." : currentSeleniumBatch.batchA}
                 newValue={loadingB ? "Loading logs for B..." : currentSeleniumBatch.batchB}
                 leftTitle={`${nameA} (${seleniumLogStats.linesA} lines total)`}
@@ -241,7 +184,7 @@ Timings: ${Object.entries(timings)
               />
             </div>
           </div>
-        )}
+        )} */}
         {activeTab === 'network' && (
           <div className="p-6 space-y-6 overflow-auto h-full w-full">
             {loadingHarA || loadingHarB ? (
