@@ -14,7 +14,9 @@ const browserstackAPI: BrowserStackAPI = {
     getAutomateParsedTextLogs: (session) => ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_PARSED_TEXT_LOGS, session),
     startSession: (options) => ipcRenderer.invoke(CHANNELS.BROWSERSTACK_START_SESSION, options),
     stopSession: (options) => ipcRenderer.invoke(CHANNELS.BROWSERSTACK_STOP_SESSION, options),
-    executeCommand: (options) => ipcRenderer.invoke(CHANNELS.BROWSERSTACK_EXECUTE_SESSION_COMMAND, options)
+    executeCommand: (options) => ipcRenderer.invoke(CHANNELS.BROWSERSTACK_EXECUTE_SESSION_COMMAND, options),
+    getAutomateParsedSessionLogs: (session)=>ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_PARSED_SESSION_LOGS,session),
+    getAutomateParsedSeleniumLogs: (session)=>ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_PARSED_SELENIUM_LOGS,session),
 }
 
 const electronAPI: ElectronAPI = {

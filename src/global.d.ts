@@ -13,6 +13,8 @@ declare global {
         startSession: (options: StartSessionOptions) => Promise<StartSessionResponse>
         stopSession: (options: StopSessionOptions) => Promise<StopSessionResponse>
         executeCommand: (options: ExecuteCommandOptions) => any
+        getAutomateParsedSessionLogs: (session: AutomateSessionResponse) => Promise<ScanResult>
+        getAutomateParsedSeleniumLogs: (session: AutomateSessionResponse) => Promise<SeleniumScanResult>
     }
 
     type ElectronAPI = {
@@ -112,4 +114,137 @@ declare global {
         hubUrl?: string
     }
 
+
+    // latency-finder
+
+    interface LogParams {
+    [key: string]: any;
+    }
+
+    interface LogRequest {
+    created_at: number;
+    line_number: number;
+    out_time: number;
+    http_type: string;
+    action: string;
+    params: LogParams;
+    }
+
+    interface LogResponse {
+    created_at: number;
+    line_number: number;
+    in_time: number;
+    params: LogParams;
+    }
+
+    interface LogDebug {
+    created_at: number;
+    line_number: number;
+    url: string;
+    }
+
+    interface Exchange {
+    id: number;
+    request?: LogRequest;
+    response?: LogResponse;
+    debug?: LogDebug;
+    }
+
+    interface Summary {
+    total_requests: number;
+    session_started_at: number | null;
+    session_completed_at: number | null;
+    session_duration: number | null;
+    setup_time: number;
+    execution_time: number;
+    in_time: number;
+    out_time: number;
+    passed_requests: number;
+    failed_requests: number;
+    unknown_requests: number;
+    log_length: number;
+    setup_time_perc: number;
+    in_time_perc: number;
+    out_time_perc: number;
+    average_cycle_time: number;
+    average_serve_time: number;
+    average_wait_time: number;
+    passed_perc: number;
+    failed_perc: number;
+    unknown_perc: number;
+    }
+
+    interface ScanResult {
+    summary: Summary;
+    exchanges: Exchange[];
+    }
+
+
+    type Phase = "Setup" | "Session" | "Tear Down" | null;
+
+    interface SeleniumLogLineType {
+    name: string;
+    identifier: string;
+    phase?: Phase;
+    }
+
+    interface LogHeaders {
+    [key: string]: string;
+    }
+
+    interface LogRequest {
+    created_at: number;
+    line_number: number;
+    out_time: number;
+    params?: any;
+    headers?: LogHeaders;
+    }
+
+    interface LogResponse {
+    created_at?: number;
+    line_number?: number;
+    in_time?: number;
+    params?: any;
+    headers?: LogHeaders;
+    }
+
+    interface SeleniumExchange {
+    id: number;
+    request: LogRequest;
+    response: LogResponse;
+    }
+
+    interface SeleniumSummary {
+    total_requests: number;
+    dialect: string;
+    setup_polls: number;
+    tear_down_polls: number;
+    session_started_at: number;
+    session_completed_at: number;
+    driver_started_at: number;
+    driver_init_time: number;
+    session_duration: number | null;
+    setup_time: number;
+    execution_time: number;
+    in_time: number;
+    out_time: number;
+    passed_requests: number;
+    failed_requests: number;
+    unknown_requests: number;
+    log_length: number;
+    setup_time_perc: number;
+    in_time_perc: number;
+    out_time_perc: number;
+    average_cycle_time: number;
+    average_serve_time: number;
+    average_wait_time: number;
+    passed_perc: number;
+    failed_perc: number;
+    unknown_perc: number;
+    }
+
+    interface SeleniumScanResult {
+    summary: SeleniumSummary;
+    exchanges: SeleniumExchange[];
+    }
 }
