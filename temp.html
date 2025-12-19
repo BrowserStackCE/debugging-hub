@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Build Execution Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f7f7f7;
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #efefef;
+        }
+        .status-passed {
+            color: green;
+            font-weight: bold;
+        }
+        .status-failed {
+            color: red;
+            font-weight: bold;
+        }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: #fff;
+        }
+        .badge-success { background: green; }
+        .badge-failed { background: red; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Build Execution Report</h1>
+
+    <h2>Build Information</h2>
+    <table>
+        <tr><th>Status</th><td><span class="badge badge-success">PASSED</span></td></tr>
+        <tr><th>Triggered By</th><td>demo_user@example.com</td></tr>
+        <tr><th>Triggered At</th><td>2024-03-07T07:36:02.695Z</td></tr>
+    </table>
+
+    <h2>Execution Summary</h2>
+    <table>
+        <tr><th>Total Tests</th><td>12</td></tr>
+        <tr><th>Passed</th><td>8</td></tr>
+        <tr><th>Failed</th><td>4</td></tr>
+        <tr><th>Running</th><td>0</td></tr>
+        <tr><th>Queued</th><td>0</td></tr>
+        <tr><th>Duration (sec)</th><td>1200</td></tr>
+    </table>
+
+    <h2>Build Details</h2>
+    <table>
+        <tr><th>Build ID</th><td>315d0cfdf7d77a42243ff87c0d6764cc8d3f9b09</td></tr>
+        <tr><th>Build Name</th><td>Smoke Suite-1</td></tr>
+    </table>
+
+    <h2>Test Executions</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>URL</th>
+                <th>Browser</th>
+                <th>Version</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Duration (sec)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Sample Test 02 | Bstackdemo add to cart</td>
+                <td>https://bstackdemo.com</td>
+                <td>chrome</td>
+                <td>102.0</td>
+                <td>desktop</td>
+                <td class="status-passed">PASSED</td>
+                <td>300</td>
+            </tr>
+
+            <tr>
+                <td>Sample Test 02 | Bstackdemo add to cart</td>
+                <td>https://bstackdemo.com</td>
+                <td>safari</td>
+                <td>16.5</td>
+                <td>desktop</td>
+                <td class="status-passed">PASSED</td>
+                <td>300</td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>
