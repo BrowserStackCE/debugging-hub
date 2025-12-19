@@ -7,24 +7,6 @@ const TopMenu = [
     path: "/",
   },
 ];
-const ProductsMenu = [
-  {
-    title: "Automate",
-    path: "/automate",
-  },
-  {
-    title: "App Automate",
-    path: "/app-automate",
-  },
-  {
-    title: "Percy",
-    path: "/percy",
-  },
-  {
-    title: "Accessibility",
-    path: "/accessibility",
-  },
-];
 
 export default function Sidebar() {
   const location = useLocation();

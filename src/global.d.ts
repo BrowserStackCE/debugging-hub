@@ -45,6 +45,7 @@ declare global {
             title: string
             description: string,
             path: string
+            component: React.ReactNode | null
         }[]
     }
 
