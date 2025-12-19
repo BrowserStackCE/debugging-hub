@@ -14,11 +14,15 @@ declare global {
         stopSession: (options: StopSessionOptions) => Promise<StopSessionResponse>
         executeCommand: (options: ExecuteCommandOptions) => any
         getAutomateParsedSessionLogs: (session: AutomateSessionResponse) => Promise<ScanResult>
-        getAutomateParsedSeleniumLogs: (session: AutomateSessionResponse) => Promise<SeleniumScanResult>
+        getAutomateParsedSeleniumLogs: (session: AutomateSessionResponse) => Promise<SeleniumScanResult>,
+        getAutomateParsedTextLogs: (session:AutomateSessionResponse) => Promise<ParsedTextLogsResult>
+        getSeleniumLogs: (selenium_logs_url: string) => Promise<string>
+        getHarLogs: (harLogsUrl: string) => Promise<string>
     }
 
     type ElectronAPI = {
         openExternalUrl: (url: string) => Promise<void>
+        
     }
 
     interface DBItem {
@@ -41,6 +45,7 @@ declare global {
             title: string
             description: string,
             path: string
+            component: React.ReactNode | null
         }[]
     }
 

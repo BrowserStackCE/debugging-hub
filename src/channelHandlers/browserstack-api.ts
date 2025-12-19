@@ -228,3 +228,37 @@ export const getAutomateParsedSeleniumLogs = async (session: AutomateSessionResp
 
     return result;
 }
+
+export const getSeleniumLogs = async (selenium_logs_url: string) => {
+    if (!selenium_logs_url) {
+        return 'No Selenium logs available for this session';
+    }
+    try {
+        const response = await fetch(selenium_logs_url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.text();
+        // For other URLs, use the existing download function with auth
+        return await download(selenium_logs_url);
+    } catch (error) {
+        console.error('Failed to fetch Selenium logs:', error);
+        return 'Failed to load Selenium logs';
+    }
+}
+
+export const getHarLogs = async (harLogsUrl: string) => {
+    if (!harLogsUrl) {
+        return 'No network logs available for this session';
+    }
+    try {
+        const response = await fetch(harLogsUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.text();
+    } catch (error) {
+        console.error('Failed to fetch HAR logs:', error);
+        return 'Failed to load network logs';
+    }
+}

@@ -12,3 +12,40 @@
   --sh-keyword: #f47067;
   --sh-comment: #a19595;
 }
+
+.diff-container .diff-viewer-code-column {
+  max-width: 600px;
+  overflow-wrap: anywhere;
+}
+
+.diff-container .rdv-code-wrapper {
+  max-width: 25vw;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+.diff-container .rdv-code {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+/* Force wrapping in ReactDiffViewer */
+.react-diff-viewer,
+.react-diff-viewer * {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+/* Limit each side to half of the container */
+.react-diff-viewer .diff-viewer-container,
+.react-diff-viewer .diff-viewer-split {
+  max-width: 48vw !important;
+}
+
+/* Override left + right code column width */
+.react-diff-viewer .diff-code,
+.react-diff-viewer .diff-line {
+  max-width: 48vw !important;
+  width: 48vw !important;
+  display: block !important;
+}
