@@ -2,6 +2,7 @@ import AutomatePage from "./routes/automate";
 import ReplayTool from "./routes/automate/tools/replay-tool";
 import LatencyFinder from "./routes/automate/tools/latency-finder";
 import SessionComparison from "./routes/automate/tools/session-comparison";
+import AppAutomatePage from "./routes/app-automate";
 
 const Products = [
   {
@@ -33,7 +34,7 @@ const Products = [
   {
     name: "App Automate",
     path: "/app-automate",
-    page: AutomatePage,
+    page: AppAutomatePage,
     tools: [
       {
         title: "Replay Toolkit",
