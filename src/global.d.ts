@@ -18,6 +18,7 @@ declare global {
         getAutomateParsedTextLogs: (session:AutomateSessionResponse) => Promise<ParsedTextLogsResult>
         getSeleniumLogs: (selenium_logs_url: string) => Promise<string>
         getHarLogs: (harLogsUrl: string) => Promise<string>
+        getScannerSessionIds: (thBuildId: string) => Promise<any>
     }
 
     type ElectronAPI = {

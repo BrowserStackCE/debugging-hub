@@ -262,3 +262,21 @@ export const getHarLogs = async (harLogsUrl: string) => {
         return 'Failed to load network logs';
     }
 }
+
+export const getScannerSessionIds = async (thBuildId: string) => {
+    const apiUrl = `https://scanner.browserstack.com/api/v1/debug/aut_session_ids?th_build_uuid=${thBuildId}`
+    
+    const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+            "Authorization": getAuth(),
+            'Content-Type': 'application/json'
+        }
+    })
+    
+    if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+    }
+    
+    return response.json()
+}

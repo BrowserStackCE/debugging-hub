@@ -3,6 +3,8 @@ import ReplayTool from "./routes/automate/tools/replay-tool";
 import LatencyFinder from "./routes/automate/tools/latency-finder";
 import SessionComparison from "./routes/automate/tools/session-comparison";
 import AppAutomatePage from "./routes/app-automate";
+import SessionFinder from "./routes/website-scanner/tools/session-finder";
+import WebsiteScannerPage from "./routes/website-scanner";
 
 const Products = [
   {
@@ -91,14 +93,14 @@ const Products = [
   },
   {
     name: "Web Accessibility",
-    path: "/web-accessibility",
-    page: AutomatePage,
+    path: "/website-scanner",
+    page: WebsiteScannerPage,
     tools: [
       {
         title: "Automate Session Finder",
         description: "Find associated automate session for accessibility scanner run",
-        path: "/web-a11y/session-finder",
-        component: null,
+        path: "/website-scanner/session-finder",
+        component: SessionFinder,
       },
     ],
   },
