@@ -53,6 +53,10 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@percy/cli": "^1.31.7",
+    "@percy/cli-command": "^1.5.1",
+    "@percy/cli-support": "^0.7.15",
+    "@percy/core": "^1.31.0",
     "@tailwindcss/postcss": "^4.1.15",
     "copy-webpack-plugin": "^13.0.1",
     "electron-squirrel-startup": "^1.0.1",
