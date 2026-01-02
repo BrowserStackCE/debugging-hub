@@ -8,7 +8,7 @@ import StorageKeys from './constants/storage-keys';
 import CONFIG from './constants/config';
 
 import { mkdirSync } from 'fs'
-import { executeCommand, getAutomateSessionDetails, getParsedAutomateTextLogs, startBrowserStackSession, stopBrowserStackSession, getAutomateParsedSeleniumLogs, getAutomateParsedSessionLogs,getSeleniumLogs, getHarLogs } from './channelHandlers/browserstack-api';
+import { executeCommand, getAutomateSessionDetails, getParsedAutomateTextLogs, startBrowserStackSession, stopBrowserStackSession, getAutomateParsedSeleniumLogs, getAutomateParsedSessionLogs,getSeleniumLogs, getHarLogs, getScannerSessionIds } from './channelHandlers/browserstack-api';
 import { openExternalUrl } from './channelHandlers/electron-api';
 
 
@@ -103,6 +103,7 @@ app.whenReady().then(() => {
   ipcMain.handle(CHANNELS.ELECTRON_OPEN_URL, (_, url) => openExternalUrl(url))
   ipcMain.handle(CHANNELS.GET_BROWSERSTACK_AUTOMATE_SELENIUM_LOGS,(_, selenium_logs_url) => getSeleniumLogs(selenium_logs_url));
   ipcMain.handle(CHANNELS.GET_BROWSERSTACK_AUTOMATE_HAR_LOGS, (_, har_logs_url) => getHarLogs(har_logs_url));
+  ipcMain.handle(CHANNELS.GET_BROWSERSTACK_SCANNER_AUTOMATE_SESSION_IDS, (_, thBuildId) => getScannerSessionIds(thBuildId));
 });
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
