@@ -8,7 +8,7 @@ import StorageKeys from './constants/storage-keys';
 import CONFIG from './constants/config';
 
 import { mkdirSync } from 'fs'
-import { executeCommand, getAutomateSessionDetails, getParsedAutomateTextLogs, startBrowserStackSession, stopBrowserStackSession, getAutomateParsedSeleniumLogs, getAutomateParsedSessionLogs,getSeleniumLogs, getHarLogs } from './channelHandlers/browserstack-api';
+import { executeCommand, getAutomateSessionDetails, getParsedAutomateTextLogs, startBrowserStackSession, stopBrowserStackSession, getAutomateParsedSeleniumLogs, getAutomateParsedSessionLogs,getSeleniumLogs, getHarLogs, executePercyDebugCommand, terminatePercySession, getSessionInfo, getActiveSessions } from './channelHandlers/browserstack-api';
 import { openExternalUrl } from './channelHandlers/electron-api';
 
 
@@ -103,6 +103,10 @@ app.whenReady().then(() => {
   ipcMain.handle(CHANNELS.ELECTRON_OPEN_URL, (_, url) => openExternalUrl(url))
   ipcMain.handle(CHANNELS.GET_BROWSERSTACK_AUTOMATE_SELENIUM_LOGS,(_, selenium_logs_url) => getSeleniumLogs(selenium_logs_url));
   ipcMain.handle(CHANNELS.GET_BROWSERSTACK_AUTOMATE_HAR_LOGS, (_, har_logs_url) => getHarLogs(har_logs_url));
+  ipcMain.handle(CHANNELS.PERCY_EXECUTE_DEBUG_COMMAND, (event, snapshotUrl, options) => executePercyDebugCommand(snapshotUrl, options, event.sender));
+  ipcMain.handle(CHANNELS.PERCY_TERMINATE_SESSION, (_, processId) => terminatePercySession(processId));
+  ipcMain.handle(CHANNELS.PERCY_GET_SESSION_INFO, (_, sessionId) => getSessionInfo(sessionId));
+  ipcMain.handle(CHANNELS.PERCY_GET_ACTIVE_SESSIONS, () => getActiveSessions());
 });
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.

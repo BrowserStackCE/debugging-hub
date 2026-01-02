@@ -262,3 +262,436 @@ export const getHarLogs = async (harLogsUrl: string) => {
         return 'Failed to load network logs';
     }
 }
+
+// Enhanced process tracking with process groups and child process monitoring
+interface ProcessSession {
+    mainProcess: any;
+    processGroupId: number;
+    childProcesses: Set<number>;
+    browserType: string | null;
+    status: 'starting' | 'running' | 'terminated' | 'error';
+    startTime: number;
+    snapshotUrl: string;
+}
+
+// Active sessions tracking
+const activeSessions = new Map<number, ProcessSession>();
+
+// Utility to find all processes in a process group
+const findProcessGroupProcesses = async (pgid: number): Promise<number[]> => {
+    return new Promise((resolve) => {
+        const { exec } = require('child_process');
+        
+        exec(`ps -o pid= -g ${pgid}`, (error: any, stdout: string) => {
+            if (error) {
+                resolve([]);
+                return;
+            }
+            
+            const pids = stdout.trim().split('\n')
+                .filter((pid: string) => pid.trim())
+                .map((pid: string) => parseInt(pid.trim()))
+                .filter((pid: number) => !isNaN(pid));
+            
+            resolve(pids);
+        });
+    });
+};
+
+// Enhanced browser detection
+const detectBrowserProcess = async (pgid: number): Promise<{ found: boolean; browserType: string; pids: number[] }> => {
+    return new Promise((resolve) => {
+        const { exec } = require('child_process');
+        
+        // Look for common browser processes in the process group
+        exec(`ps -o pid=,comm= -g ${pgid}`, (error: any, stdout: string) => {
+            if (error) {
+                resolve({ found: false, browserType: '', pids: [] });
+                return;
+            }
+            
+            const lines = stdout.trim().split('\n');
+            const browserPids: number[] = [];
+            let detectedBrowser = '';
+            
+            for (const line of lines) {
+                const [pidStr, comm] = line.trim().split(/\s+/);
+                const pid = parseInt(pidStr);
+                
+                if (isNaN(pid)) continue;
+                
+                // Check for various browser processes
+                const browserTypes = [
+                    { name: 'chrome', patterns: ['chrome', 'chromium', 'google-chrome'] },
+                    { name: 'firefox', patterns: ['firefox', 'firefox-bin'] },
+                    { name: 'safari', patterns: ['safari', 'safaridriver'] },
+                    { name: 'edge', patterns: ['edge', 'msedge'] }
+                ];
+                
+                for (const browser of browserTypes) {
+                    if (browser.patterns.some(pattern => comm.toLowerCase().includes(pattern))) {
+                        detectedBrowser = browser.name;
+                        browserPids.push(pid);
+                        break;
+                    }
+                }
+            }
+            
+            resolve({ 
+                found: browserPids.length > 0, 
+                browserType: detectedBrowser, 
+                pids: browserPids 
+            });
+        });
+    });
+};
+
+// Monitor process lifecycle
+const monitorSession = async (sessionId: number) => {
+    const session = activeSessions.get(sessionId);
+    if (!session) return;
+    
+    const checkInterval = setInterval(async () => {
+        try {
+            // Check if session still exists and is not terminated
+            const currentSession = activeSessions.get(sessionId);
+            if (!currentSession || currentSession.status === 'terminated') {
+                clearInterval(checkInterval);
+                return;
+            }
+            
+            // Check if main process is still running
+            const { exec } = require('child_process');
+            
+            exec(`kill -0 ${session.mainProcess.pid}`, (error: any) => {
+                if (error) {
+                    // Main process died, clean up session
+                    clearInterval(checkInterval);
+                    session.status = 'terminated';
+                    activeSessions.delete(sessionId);
+                    
+                    // Notify UI only if this wasn't a manual termination
+                    session.mainProcess.webContents?.send('percy-debug-log', { 
+                        event: 'close', 
+                        code: 0,
+                        sessionId: sessionId,
+                        reason: 'process_died'
+                    });
+                }
+            });
+            
+            // Update child processes and browser detection
+            const allChildPids = await findProcessGroupProcesses(session.processGroupId);
+            session.childProcesses = new Set(allChildPids.filter(pid => pid !== session.mainProcess.pid));
+            
+            const browserInfo = await detectBrowserProcess(session.processGroupId);
+            if (browserInfo.found && !session.browserType) {
+                session.browserType = browserInfo.browserType;
+                session.status = 'running';
+                
+                session.mainProcess.webContents?.send('percy-debug-log', { 
+                    browserLaunched: true, 
+                    browserType: browserInfo.browserType,
+                    sessionId: sessionId 
+                });
+            }
+            
+        } catch (error) {
+            console.error('Error monitoring session:', error);
+        }
+    }, 2000); // Check every 2 seconds
+    
+    // Stop monitoring after 10 minutes to prevent memory leaks
+    setTimeout(() => {
+        clearInterval(checkInterval);
+    }, 10 * 60 * 1000);
+};
+
+export const executePercyDebugCommand = async (snapshotUrl: string, options?: {
+    browser?: string;
+    width?: string;
+    headless?: boolean;
+    withBaseline?: boolean;
+    saveResources?: boolean;
+    bstackLocalKey?: string;
+    percyToken?: string;
+}, webContents?: Electron.WebContents) => {
+    const PERCY_TOKEN = options?.percyToken || '84a3749dbd6a4793aafa1b638e314f402ebf7bfd96588ab00312adb84e5842eb';
+    const BSTACK_LOCAL_KEY = options?.bstackLocalKey || CONFIG.demoAccessKey;
+    
+    try {
+        const { spawn } = require('child_process');
+        
+        // Build command with options
+        const commandOptions = [];
+        if (options?.browser && options.browser !== 'chrome') commandOptions.push(`--${options.browser}`);
+        if (options?.headless) commandOptions.push('--headless');
+        if (options?.withBaseline) commandOptions.push('--with-baseline');
+        if (options?.saveResources) commandOptions.push('--save-resources');
+        if (options?.width && options.width.trim() !== '' && options.width !== '1920') commandOptions.push(`--width ${options.width}`);
+        
+        const optionsString = commandOptions.length > 0 ? ` ${commandOptions.join(' ')}` : '';
+        const command = `npx percy support:debug "${snapshotUrl}"${optionsString}`;
+        
+        const child = spawn(command, {
+            shell: true,
+            env: {
+                ...process.env,
+                PERCY_TOKEN: PERCY_TOKEN,
+                BSTACK_LOCAL_KEY: BSTACK_LOCAL_KEY
+            },
+            detached: true, // Create new process group
+            stdio: ['ignore', 'pipe', 'pipe']
+        });
+        
+        // Create session tracking
+        const session: ProcessSession = {
+            mainProcess: child,
+            processGroupId: child.pid,
+            childProcesses: new Set(),
+            browserType: null,
+            status: 'starting',
+            startTime: Date.now(),
+            snapshotUrl: snapshotUrl
+        };
+        
+        activeSessions.set(child.pid, session);
+        
+        // Start monitoring the session
+        monitorSession(child.pid);
+        
+        let stdout = '';
+        let stderr = '';
+        let hasSentInitialLogs = false;
+        
+        // Add initial logs only once
+        if (!hasSentInitialLogs) {
+            webContents?.send('percy-debug-log', { 
+                log: `export BSTACK_LOCAL_KEY=${BSTACK_LOCAL_KEY}`,
+                sessionId: child.pid 
+            });
+            webContents?.send('percy-debug-log', { 
+                log: `export PERCY_TOKEN=${PERCY_TOKEN}`,
+                sessionId: child.pid 
+            });
+            webContents?.send('percy-debug-log', { 
+                log: `$ npx percy support:debug "${snapshotUrl}"${optionsString}`,
+                sessionId: child.pid 
+            });
+            webContents?.send('percy-debug-log', { 
+                log: `Process ID: ${child.pid} (Process Group: ${child.pid})`,
+                sessionId: child.pid 
+            });
+            hasSentInitialLogs = true;
+        }
+
+        child.stdout?.on('data', (data: Buffer) => {
+            const output = data.toString();
+            stdout += output;
+            output.split('\n').forEach(line => {
+                if (line.trim()) {
+                    // Filter out duplicate initial commands that Percy might echo
+                    if (line.includes('export PERCY_TOKEN=') || 
+                        line.includes('npx percy support:debug') ||
+                        line.includes('Process ID:')) {
+                        return; // Skip these lines as we already sent them
+                    }
+                    webContents?.send('percy-debug-log', { log: line, sessionId: child.pid });
+                }
+            });
+        });
+        
+        child.stderr?.on('data', (data: Buffer) => {
+            const error = data.toString();
+            stderr += error;
+            error.split('\n').forEach(line => {
+                if (line.trim()) {
+                    // Filter out duplicate initial commands that Percy might echo
+                    if (line.includes('export PERCY_TOKEN=') || 
+                        line.includes('npx percy support:debug') ||
+                        line.includes('Process ID:')) {
+                        return; // Skip these lines as we already sent them
+                    }
+                    webContents?.send('percy-debug-log', { log: line, sessionId: child.pid });
+                }
+            });
+        });
+        
+        child.on('close', async (code: number | null) => {
+            const session = activeSessions.get(child.pid);
+            if (session) {
+                session.status = 'terminated';
+                activeSessions.delete(child.pid);
+                
+                // Notify UI of natural process termination
+                webContents?.send('percy-debug-log', { 
+                    event: 'close', 
+                    code,
+                    sessionId: child.pid,
+                    reason: 'natural_exit'
+                });
+            }
+        });
+        
+        child.on('error', (error: Error) => {
+            const session = activeSessions.get(child.pid);
+            if (session) {
+                session.status = 'error';
+                activeSessions.delete(child.pid);
+            }
+            
+            webContents?.send('percy-debug-log', { 
+                event: 'error', 
+                message: error.message,
+                sessionId: child.pid 
+            });
+        });
+        
+        // Return the session ID immediately so UI can track it
+        return { success: true, processId: child.pid };
+        
+    } catch (error) {
+        console.error('Error executing Percy debug command:', error);
+        return {
+            success: false,
+            error: (error as Error).message,
+            logs: [`Error: ${(error as Error).message}`]
+        };
+    }
+}
+
+export const terminatePercySession = async (processId: number) => {
+    try {
+        const session = activeSessions.get(processId);
+        
+        if (!session) {
+            return {
+                success: false,
+                error: 'Session not found or already terminated'
+            };
+        }
+        
+        // Mark session as terminated immediately to prevent monitoring conflicts
+        session.status = 'terminated';
+        
+        // Send manual termination event BEFORE killing the process
+        session.mainProcess.webContents?.send('percy-debug-log', {
+            event: 'close',
+            code: 0,
+            sessionId: processId,
+            reason: 'manual_termination'
+        });
+        
+        const { exec } = require('child_process');
+        
+        return new Promise((resolve) => {
+            // First, try to terminate the entire process group
+            exec(`kill -TERM -${session.processGroupId}`, (error: any) => {
+                if (error) {
+                    console.log('Graceful termination failed, using forceful termination');
+                    
+                    // Force kill the entire process group
+                    exec(`kill -KILL -${session.processGroupId}`, (error2: any) => {
+                        if (error2) {
+                            // Fallback: kill individual processes
+                            const killPromises: Promise<any>[] = [];
+                            
+                            // Kill main process
+                            killPromises.push(new Promise((killResolve) => {
+                                exec(`kill -KILL ${session.mainProcess.pid}`, (killError: any) => {
+                                    killResolve({ pid: session.mainProcess.pid, error: killError });
+                                });
+                            }));
+                            
+                            // Kill all child processes
+                            session.childProcesses.forEach(childPid => {
+                                killPromises.push(new Promise((killResolve) => {
+                                    exec(`kill -KILL ${childPid}`, (killError: any) => {
+                                        killResolve({ pid: childPid, error: killError });
+                                    });
+                                }));
+                            });
+                            
+                            Promise.all(killPromises).then(() => {
+                                // Clean up session regardless of individual kill results
+                                activeSessions.delete(processId);
+                                
+                                resolve({
+                                    success: true,
+                                    message: 'Percy session terminated forcefully'
+                                });
+                            });
+                        } else {
+                            // Successful force kill
+                            activeSessions.delete(processId);
+                            
+                            resolve({
+                                success: true,
+                                message: 'Percy session terminated forcefully'
+                            });
+                        }
+                    });
+                } else {
+                    // Graceful termination succeeded
+                    
+                    // Wait a moment and check if processes are still running
+                    setTimeout(() => {
+                        exec(`kill -0 -${session.processGroupId}`, (checkError: any) => {
+                            if (checkError) {
+                                // Process group is dead
+                                activeSessions.delete(processId);
+                                
+                                resolve({
+                                    success: true,
+                                    message: 'Percy session terminated gracefully'
+                                });
+                            } else {
+                                // Still running, force kill
+                                exec(`kill -KILL -${session.processGroupId}`, (forceError: any) => {
+                                    activeSessions.delete(processId);
+                                    
+                                    resolve({
+                                        success: true,
+                                        message: forceError ? 'Percy session terminated with mixed results' : 'Percy session terminated forcefully'
+                                    });
+                                });
+                            }
+                        });
+                    }, 2000); // Wait 2 seconds for graceful termination
+                }
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error terminating Percy session:', error);
+        return {
+            success: false,
+            error: (error as Error).message
+        };
+    }
+}
+
+// Utility to get session info
+export const getSessionInfo = (sessionId: number) => {
+    const session = activeSessions.get(sessionId);
+    return session ? {
+        sessionId: session.mainProcess.pid,
+        status: session.status,
+        browserType: session.browserType,
+        childProcessCount: session.childProcesses.size,
+        startTime: session.startTime,
+        snapshotUrl: session.snapshotUrl
+    } : null;
+}
+
+// Utility to list all active sessions
+export const getActiveSessions = () => {
+    return Array.from(activeSessions.entries()).map(([pid, session]) => ({
+        sessionId: pid,
+        status: session.status,
+        browserType: session.browserType,
+        childProcessCount: session.childProcesses.size,
+        startTime: session.startTime,
+        snapshotUrl: session.snapshotUrl
+    }));
+}

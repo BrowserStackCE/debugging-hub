@@ -18,11 +18,18 @@ declare global {
         getAutomateParsedTextLogs: (session:AutomateSessionResponse) => Promise<ParsedTextLogsResult>
         getSeleniumLogs: (selenium_logs_url: string) => Promise<string>
         getHarLogs: (harLogsUrl: string) => Promise<string>
+        executePercyDebugCommand: (snapshotUrl: string, options?: PercyDebugOptions) => Promise<PercyDebugResponse>
+        terminatePercySession: (processId: number) => Promise<TerminatePercySessionResponse>
+        getSessionInfo?: (sessionId: number) => Promise<PercySessionInfo | null>
+        getActiveSessions?: () => Promise<PercySessionInfo[]>
     }
 
     type ElectronAPI = {
         openExternalUrl: (url: string) => Promise<void>
-        
+        ipcRenderer: {
+            on: (channel: string, listener: (...args: any[]) => void) => void
+            removeListener: (channel: string, listener: (...args: any[]) => void) => void
+        }
     }
 
     interface DBItem {
@@ -251,5 +258,43 @@ declare global {
     interface SeleniumScanResult {
     summary: SeleniumSummary;
     exchanges: SeleniumExchange[];
+    }
+
+    // Percy Debug Command Types
+    interface PercyDebugOptions {
+        browser?: string;
+        width?: string;
+        headless?: boolean;
+        withBaseline?: boolean;
+        saveResources?: boolean;
+        bstackLocalKey?: string;
+        percyToken?: string;
+    }
+
+    interface PercyDebugResponse {
+        success: boolean;
+        command?: string;
+        output?: string;
+        error?: string;
+        logs?: string[];
+        browserLaunched?: boolean;
+        processId?: number;
+    }
+
+    interface TerminatePercySessionResponse {
+        success: boolean;
+        message?: string;
+        error?: string;
+    }
+
+    type SessionStatus = 'starting' | 'running' | 'terminated' | 'error';
+
+    interface PercySessionInfo {
+        sessionId: number;
+        status: SessionStatus;
+        browserType: string | null;
+        childProcessCount: number;
+        startTime: number;
+        snapshotUrl: string;
     }
 }
