@@ -3,6 +3,8 @@ import ReplayTool from "./routes/automate/tools/replay-tool";
 import LatencyFinder from "./routes/automate/tools/latency-finder";
 import SessionComparison from "./routes/automate/tools/session-comparison";
 import AppAutomatePage from "./routes/app-automate";
+import TRAPage from "./routes/test-reporting-and-analytics";
+import SDKLogsDownloader from "./routes/test-reporting-and-analytics/tools/sdk-logs-downloader";
 
 const Products = [
   {
@@ -77,15 +79,15 @@ const Products = [
     ],
   },
   {
-    name: "Test Report & Analytics",
-    path: "/tra",
-    page: AutomatePage,
+    name: "Test Reporting & Analytics",
+    path: "/test-reporting-and-analytics",
+    page: TRAPage,
     tools: [
       {
         title: "SDK Logs Downloader",
         description: "Download SDK logs from Backend",
-        path: "/tra/download-logs",
-        component: null,
+        path: "/test-reporting-and-analytics/sdk-logs-downloader",
+        component: SDKLogsDownloader,
       },
     ],
   },
