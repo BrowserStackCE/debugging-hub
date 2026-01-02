@@ -18,11 +18,17 @@ const browserstackAPI: BrowserStackAPI = {
     getAutomateParsedSessionLogs: (session)=>ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_PARSED_SESSION_LOGS,session),
     getAutomateParsedSeleniumLogs: (session)=>ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_PARSED_SELENIUM_LOGS,session),
     getSeleniumLogs: (selenium_logs_url) => ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_SELENIUM_LOGS, selenium_logs_url),
-    getHarLogs: (har_logs_url) => ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_HAR_LOGS, har_logs_url)
+    getHarLogs: (har_logs_url) => ipcRenderer.invoke(CHANNELS.GET_BROWSERSTACK_AUTOMATE_HAR_LOGS, har_logs_url),
+    executePercyDebugCommand: (snapshotUrl, options) => ipcRenderer.invoke(CHANNELS.PERCY_EXECUTE_DEBUG_COMMAND, snapshotUrl, options),
+    terminatePercySession: (processId) => ipcRenderer.invoke(CHANNELS.PERCY_TERMINATE_SESSION, processId)
 }
 
 const electronAPI: ElectronAPI = {
-    openExternalUrl: (url: string) => ipcRenderer.invoke(CHANNELS.ELECTRON_OPEN_URL, url)
+    openExternalUrl: (url: string) => ipcRenderer.invoke(CHANNELS.ELECTRON_OPEN_URL, url),
+    ipcRenderer: {
+        on: (channel: string, listener: (...args: any[]) => void) => ipcRenderer.on(channel, listener),
+        removeListener: (channel: string, listener: (...args: any[]) => void) => ipcRenderer.removeListener(channel, listener)
+    }
 }
 
 contextBridge.exposeInMainWorld('credentialsAPI', credentialsAPI);

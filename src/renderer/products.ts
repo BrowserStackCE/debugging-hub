@@ -2,7 +2,8 @@ import AutomatePage from "./routes/automate";
 import ReplayTool from "./routes/automate/tools/replay-tool";
 import LatencyFinder from "./routes/automate/tools/latency-finder";
 import SessionComparison from "./routes/automate/tools/session-comparison";
-import AppAutomatePage from "./routes/app-automate";
+import AppAutomatePage from "./routes/percy/tools";
+import SnapshotReplay from "./routes/percy/tools/snapshot-replay";
 
 const Products = [
   {
@@ -66,7 +67,7 @@ const Products = [
         title: "Snapshot Replay",
         description: "Replay snapshots",
         path: "/percy/snapshot-replay",
-        component: null,
+        component: SnapshotReplay,
       },
       {
         title: "CLI Logs Downloader",
