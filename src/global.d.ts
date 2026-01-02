@@ -18,6 +18,9 @@ declare global {
         getAutomateParsedTextLogs: (session:AutomateSessionResponse) => Promise<ParsedTextLogsResult>
         getSeleniumLogs: (selenium_logs_url: string) => Promise<string>
         getHarLogs: (harLogsUrl: string) => Promise<string>
+        getAppAutomateSessionDetails: (id: string) => Promise<AppAutomateSessionResponse>
+        getAppAutomateParsedTextLogs: (session: AppAutomateSessionResponse) => Promise<ParsedTextLogsResult>
+        getAppAutomateNetworkLogs: (session: AppAutomateSessionResponse) => Promise<string>
     }
 
     type ElectronAPI = {
@@ -75,6 +78,36 @@ declare global {
             har_logs_url: string;
             selenium_logs_url: string;
             selenium_telemetry_logs_url: string;
+        };
+    };
+
+    type AppAutomateSessionResponse = {
+        automation_session: {
+            name?: string;
+            duration: number;
+            os: string;
+            os_version: string;
+            browser_version: string;
+            browser: string | null;
+            device: string;
+            status: "passed" | "failed" | "error" | string;
+            hashed_id: string;
+            reason: string;
+            build_name: string;
+            project_name: string;
+            logs: string;
+            browser_url: string;
+            public_url: string;
+            appium_logs_url: string;
+            video_url: string;
+            device_logs_url: string;
+            app_details: {
+                app_url: string;
+                app_name: string;
+                app_version: string;
+                app_custom_id?: string;
+                uploaded_at: string;
+            };
         };
     };
 

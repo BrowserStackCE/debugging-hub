@@ -3,6 +3,7 @@ import ReplayTool from "./routes/automate/tools/replay-tool";
 import LatencyFinder from "./routes/automate/tools/latency-finder";
 import SessionComparison from "./routes/automate/tools/session-comparison";
 import AppAutomatePage from "./routes/app-automate";
+import AppAutomateSessionComparison from "./routes/app-automate/tools/session-comparison";
 
 const Products = [
   {
@@ -52,8 +53,8 @@ const Products = [
       {
         title: "Session Comparison",
         description: "Compares logs across sessions and highlights differences",
-        path: '/automate/session-comparison',
-        component: null
+        path: '/app-automate/session-comparison',
+        component: AppAutomateSessionComparison
       }
     ],
   },
