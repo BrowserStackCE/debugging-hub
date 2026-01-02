@@ -34,7 +34,7 @@ export const getParsedAutomateTextLogs = async (session: AutomateSessionResponse
     const logs = await download(session.automation_session.logs);
     const lines = logs.split('\n');
 
-    const timestampRegex = /^\d{4}-\d{2}-\d{2} \d{1,2}:\d{1,2}:\d{1,2}:\d{1,3}/;
+    const timestampRegex = /^\d{4}-\d{1,2}-\d{1,2} \d{1,2}:\d{1,2}:\d{1,2}:\d{1,3}/;
 
     const entries: string[] = [];
 
@@ -259,6 +259,101 @@ export const getHarLogs = async (harLogsUrl: string) => {
         return await response.text();
     } catch (error) {
         console.error('Failed to fetch HAR logs:', error);
+        return 'Failed to load network logs';
+    }
+}
+
+export const getAppAutomateSessionDetails: BrowserStackAPI['getAppAutomateSessionDetails'] = async (id: string) => {
+    const sessionDetailsTextData = await download(`${BASE_URL}/app-automate/sessions/${id}.json`);
+    const sessionDetailsJSON = JSON.parse(sessionDetailsTextData) as AppAutomateSessionResponse
+    return sessionDetailsJSON
+}
+
+export const getAppAutomateParsedTextLogs = async (session: AppAutomateSessionResponse) => {
+    const logs = await download(session.automation_session.logs);
+    const lines = logs.split('\n');
+
+    const timestampRegex = /^\d{4}-\d{1,2}-\d{1,2} \d{1,2}:\d{1,2}:\d{1,2}:\d{1,3}/;
+
+    const entries: string[] = [];
+
+    for (const line of lines) {
+        if (timestampRegex.test(line)) {
+            // New log entry → push as a new entry
+            entries.push(line);
+        } else if (entries.length > 0) {
+            // Continuation of previous entry → append
+            entries[entries.length - 1] += '\n' + line;
+        } else {
+            // Edge case: first line doesn't start with timestamp
+            entries.push(line);
+        }
+    }
+
+    // Parse capabilities from the logs - this is a simplified version
+    const capabilities: any[] = [];
+    
+    // Look for capability information in the logs
+    for (const entry of entries) {
+        if (entry.includes('capabilities') || entry.includes('Capabilities')) {
+            try {
+                // Try to extract JSON from the entry
+                const jsonMatch = entry.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const caps = JSON.parse(jsonMatch[0]);
+                    capabilities.push(caps);
+                }
+            } catch (e) {
+                // If parsing fails, continue
+            }
+        }
+    }
+
+    // If no capabilities found in logs, create a basic structure from session info
+    if (capabilities.length === 0) {
+        const basicCaps = {
+            platformName: session.automation_session.os,
+            platformVersion: session.automation_session.os_version,
+            deviceName: session.automation_session.device,
+            app: session.automation_session.app_details?.app_url,
+            'appium:deviceName': session.automation_session.device,
+            'appium:platformName': session.automation_session.os,
+            'appium:platformVersion': session.automation_session.os_version,
+            'appium:app': session.automation_session.app_details?.app_url,
+        };
+        capabilities.push(basicCaps);
+    }
+
+    return {
+        capabilities,
+        requests: entries,
+        responses: [] as any[]
+    };
+}
+
+export const getAppAutomateNetworkLogs = async (session: AppAutomateSessionResponse) => {
+    // Extract build_id and session_id from the session
+    const buildId = session.automation_session.browser_url?.match(/\/builds\/([^\/]+)\//)?.[1];
+    const sessionId = session.automation_session.hashed_id;
+    
+    if (!buildId || !sessionId) {
+        return 'No network logs available for this session';
+    }
+    
+    try {
+        const networkLogsUrl = `${BASE_URL}/app-automate/builds/${buildId}/sessions/${sessionId}/networklogs`;
+        const response = await fetch(networkLogsUrl, {
+            headers: {
+                "Authorization": getAuth()
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.text();
+    } catch (error) {
+        console.error('Failed to fetch App Automate network logs:', error);
         return 'Failed to load network logs';
     }
 }
